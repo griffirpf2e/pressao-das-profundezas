@@ -1,0 +1,37 @@
+{
+  "id": "pressao-das-profundezas",
+  "title": "Pressão das Profundezas",
+  "description": "Sistema multiplayer de Strain para PF2e, integrado ao PF2e Toolbelt Resource Tracker.",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "João Marques"
+    }
+  ],
+  "esmodules": [
+    "scripts/strain.js"
+  ],
+  "styles": [
+    "styles/strain.css"
+  ],
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ],
+    "requires": [
+      {
+        "id": "pf2e-toolbelt",
+        "type": "module",
+        "compatibility": {}
+      }
+    ]
+  }
+}

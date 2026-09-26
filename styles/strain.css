@@ -1,0 +1,22 @@
+.pdp-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.pdp-checks button, .pdp-effect {
+  flex: 1 1 auto;
+}
+.pdp-note {
+  opacity: 0.85;
+  font-size: 0.9em;
+}
+.pdp-consequence {
+  border: 1px solid var(--color-border-light-2, #777);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+}
+.pdp-consequence p {
+  margin: 4px 0;
+}
