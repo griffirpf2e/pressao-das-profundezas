@@ -1,28 +1,26 @@
 # Pressão das Profundezas
 
-Versão 0.1.0 de teste.
+Módulo multiplayer de Strain para Pathfinder 2e / Foundry VTT.
+
+## v0.2.0
+- Failure e Critical Failure aumentam `Strain` em +1, limitado pelo Resource Tracker.
+- Failure/CF continuam aumentando `Villain Point` em +1.
+- Modificadores dos testes: `+1 → -1 → -3 → -5 → -6` (cap).
+- Botão escolhido usa indicador estático `✓ ... — Escolhido`.
+- Cada um dos 20 eventos possui texto narrativo próprio de falha.
+- Critical Failure acrescenta uma linha narrativa extra.
+- Battle Medicine em Strain 4: imunidade por 1 hora.
+- Effects de penalidade de próximo teste continuam removendo-se após a rolagem.
 
 ## Requisitos
 - Pathfinder 2e
 - PF2e Toolbelt
-- No Resource Tracker, recursos chamados exatamente `Strain` e `Villain Point`.
-
-## Instalação manual
-1. Feche/reinicie o mundo conforme necessário.
-2. Extraia a pasta `pressao-das-profundezas` dentro da pasta `Data/modules` do Foundry.
-3. Reinicie o Foundry.
-4. Ative **Pressão das Profundezas** em Manage Modules.
-5. Garanta que cada jogador tenha seu PC definido em User Configuration (Character).
+- Resource Tracker com recursos chamados exatamente `Strain` e `Villain Point`
 
 ## Macro do GM
-Crie um Script Macro contendo:
+```js
+game.pressaoDasProfundezas.startRest();
+```
 
-    game.pressaoDasProfundezas.startRest();
-
-## Teste multiplayer
-Entre também com uma conta de jogador. O GM inicia o descanso; o jogador clica no teste no chat.
-O módulo encaminha a escolha ao GM e manda a sequência de rolagens para o cliente do jogador.
-
-## Observação
-Esta é uma primeira versão de teste. As penalidades de próximo teste (Initiative/Perception/Crafting/Stealth)
-podem gerar Effects. As demais consequências continuam como escolhas manuais do GM.
+## Manifest
+`https://github.com/undergroundjv-spec/pressao-das-profundezas/releases/latest/download/module.json`

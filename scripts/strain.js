@@ -1,7 +1,7 @@
 const MODULE_ID = "pressao-das-profundezas";
 const TOOLBELT = "pf2e-toolbelt";
 const RESOURCE_SETTING = "resourceTracker.worldResources";
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 const LABELS = {
   fortitude:"Fortitude", reflex:"Reflexos", will:"Vontade", perception:"Percepção",
@@ -32,6 +32,30 @@ const EVENTS = {
   18:["Presságio de Desastre",["will","religion","diplomacy"]],
   19:["Pressão das Profundezas",["fortitude","athletics","medicine"]],
   20:["Desespero",["perception","religion","occultism"]]
+};
+
+
+const FAILURE_FLAVOR = {
+  1:"O ar parece ficar mais pesado a cada respiração. Por um instante, seu peito se recusa a acompanhar o ritmo — e as profundezas cobram seu preço.",
+  2:"Os sussurros finalmente encontram uma brecha. Entre palavras impossíveis de compreender, você tem a perturbadora certeza de ouvir seu próprio nome.",
+  3:"Pedras cedem sob seus pés e o chão se desloca inesperadamente. O lugar parece rejeitar sua presença.",
+  4:"Um som próximo faz você reagir — passos, talvez uma voz. Quando percebe o engano, resta apenas silêncio... e a sensação de que algo aprendeu como chamar sua atenção.",
+  5:"O ar velho das profundezas invade seus pulmões. Cada inspiração exige esforço, e até descansar começa a parecer exaustivo.",
+  6:"Uma sombra se move onde nenhuma luz mudou. Quando você olha novamente, ela desapareceu — mas estava definitivamente mais perto.",
+  7:"Um pensamento indesejado se instala em sua mente: vocês não deveriam estar aqui. Pior ainda, por alguns segundos ele parece inteiramente racional.",
+  8:"Você sente um olhar sobre si e procura sua origem. Não encontra ninguém. Ainda assim, a sensação permanece: alguma coisa sabe exatamente onde vocês estão.",
+  9:"Algo invisível parece penetrar lentamente seus pensamentos e músculos. Resistir exige esforço — como se as próprias profundezas tentassem deixar uma marca em você.",
+  10:"Uma lembrança surge sem aviso. Por alguns instantes ela parece sua... até que você percebe que jamais viveu aquilo.",
+  11:"Uma vibração percorre pedra, metal e ossos ao mesmo tempo. Seus equipamentos tremem e seus dentes rangem enquanto a masmorra parece pulsar ao seu redor.",
+  12:"Aquilo que antes parecia aleatório começa a se repetir de maneira familiar demais. As profundezas não estão apenas reagindo à sua presença — estão aprendendo com vocês.",
+  13:"Um pulso grave atravessa o chão. Depois outro. Por alguns segundos, é impossível afastar a impressão de que vocês estão descansando dentro de algo vivo.",
+  14:"Todos os sons desaparecem de uma vez. Respiração, equipamentos, até seus próprios movimentos parecem abafados. Então o mundo retorna com um único pensamento: alguma coisa estava escutando.",
+  15:"Uma presença esmagadora invade o ambiente. Você não consegue vê-la, mas seu corpo reage antes de sua mente — algo aqui exige submissão.",
+  16:"Por um instante, a passagem pela qual vocês vieram parece diferente. Ângulos não se encaixam, distâncias parecem erradas... e então tudo volta ao normal.",
+  17:"Dois pontos surgem na escuridão. Depois quatro. Depois muitos. Quando a luz alcança o local, não há nada ali — mas você sabe que alguma coisa estava olhando de volta.",
+  18:"Uma certeza terrível surge sem explicação: algo ruim está prestes a acontecer. Você não sabe quando, nem de onde virá — apenas que as profundezas ainda não terminaram com vocês.",
+  19:"O peso acumulado da masmorra finalmente se torna insuportável. Dor, exaustão e paranoia se misturam enquanto as profundezas parecem apertar suas garras ao redor de vocês.",
+  20:"Por um breve instante, continuar parece inútil. A saída parece distante demais, os perigos numerosos demais — e uma pequena parte de você simplesmente quer desistir."
 };
 
 const CONSEQUENCES = {
@@ -85,7 +109,7 @@ let socketReady = false;
 
 function esc(s){ return foundry.utils.escapeHTML(String(s ?? "")); }
 function requiredProgress(minutes){ return Math.max(Math.floor(minutes/10)-1,0); }
-function penaltyFor(n){ return -Math.min((n-1)*2,8); }
+function penaltyFor(n){ return [1,-1,-3,-5][n-1] ?? -6; }
 function getResources(){ return game.settings.get(TOOLBELT, RESOURCE_SETTING) ?? []; }
 function getResource(name){ return getResources().find(r=>r.name===name); }
 
@@ -162,12 +186,19 @@ async function gmFailure(data){
   if(!game.user.isGM) return;
   const actor=await fromUuid(data.actorUuid);
   if(!actor) return;
-  let vp={oldValue:"?",newValue:"?"};
+  let vp={oldValue:"?",newValue:"?"}, strainChange={oldValue:data.strain,newValue:Math.min(data.strain+1,4)};
   try { vp=await changeResource("Villain Point",1); } catch(e){ console.error(e); }
+  try { strainChange=await changeResource("Strain",1); } catch(e){ console.error(e); }
   const severity=data.degree==="criticalFailure" ? Math.min(data.strain+1,4) : data.strain;
-  await ChatMessage.create({content:`<h2>${data.degree==="criticalFailure"?"Falha Crítica":"Falha"}</h2>
-    <p><strong>${esc(actor.name)}</strong> sucumbe à pressão de <strong>${esc(data.eventName)}</strong>.</p>
-    <p><strong>+1 Villain Point</strong> (${vp.oldValue} → ${vp.newValue})</p>`});
+  const flavor=FAILURE_FLAVOR[data.eventNo] ?? "As profundezas cobram seu preço.";
+  const criticalExtra=data.degree==="criticalFailure"
+    ? `<p><em>Desta vez, as profundezas não apenas resistem. Elas deixam algo para trás.</em></p>`
+    : "";
+  await ChatMessage.create({content:`<h2>${data.degree==="criticalFailure"?"Falha Crítica":"Falha"} — ${esc(data.eventName)}</h2>
+    <p><em>${esc(flavor)}</em></p>${criticalExtra}
+    <p><strong>${esc(actor.name)}</strong> sucumbe à pressão das profundezas.</p>
+    <p><strong>+1 Strain</strong> (${strainChange.oldValue} → ${strainChange.newValue})<br>
+    <strong>+1 Villain Point</strong> (${vp.oldValue} → ${vp.newValue})</p>`});
   const rows=(CONSEQUENCES[severity]??[]).map((c,i)=>{
     const btn=c[2]?`<button class="pdp-effect" data-actor="${actor.uuid}" data-severity="${severity}" data-index="${i}">
       <i class="fas fa-bolt"></i> Aplicar Efeito</button>`:"";
@@ -212,7 +243,7 @@ async function runPlayerSequence(payload){
     else if(degree==="success") progress+=1;
     else {
       game.socket.emit(`module.${MODULE_ID}`,{type:"failure",data:{
-        actorUuid:actor.uuid,eventName:payload.eventName,check:payload.check,strain:payload.strain,degree,history
+        actorUuid:actor.uuid,eventNo:payload.eventNo,eventName:payload.eventName,check:payload.check,strain:payload.strain,degree,history
       }});
       return;
     }
@@ -249,7 +280,7 @@ async function startRest(){
         await ChatMessage.create({content:`<h2>Evento de Strain</h2><h3>${esc(eventName)}</h3>
           <p><strong>Duração:</strong> ${minutes} minutos<br><strong>Strain:</strong> ${strain}/4<br><strong>Progresso necessário:</strong> ${required}</p>
           <p><strong>Escolha como enfrentar o evento:</strong></p><div class="pdp-checks">${buttons}</div>
-          <p class="pdp-note">Sucesso = 1 progresso • Sucesso Crítico = 2<br>Penalidades: +0 → −2 → −4 → −6 → −8</p>`});
+          <p class="pdp-note">Sucesso = 1 progresso • Sucesso Crítico = 2<br>Modificadores: +1 → −1 → −3 → −5 → −6</p>`});
       }},
       cancel:{label:"Cancelar"}
     }, default:"start"
@@ -270,7 +301,7 @@ Hooks.once("ready",()=>{
       if(!activeRest || activeRest.restId!==packet.data.restId || activeRest.resolved) return;
       activeRest.resolved=true;
       game.socket.emit(`module.${MODULE_ID}`,{type:"run",data:{
-        userId:packet.data.userId,check:packet.data.check,eventName:activeRest.eventName,
+        userId:packet.data.userId,check:packet.data.check,eventNo:activeRest.eventNo,eventName:activeRest.eventName,
         minutes:activeRest.minutes,required:activeRest.required,strain:activeRest.strain
       }});
       return;
@@ -280,37 +311,49 @@ Hooks.once("ready",()=>{
     if(packet.type==="success") return gmSuccess(packet.data);
   });
 
-  Hooks.on("renderChatMessageHTML",(message,html)=>{
-    const root=html instanceof HTMLElement?html:html?.[0]??html;
-    if(!root) return;
+  // Delegated click handling: this listener exists on every connected client
+  // and works for both newly-rendered and already-rendered chat cards.
+  document.addEventListener("click", async event => {
+    const b = event.target?.closest?.(".pdp-check, .pdp-effect");
+    if (!b) return;
 
-    for(const b of root.querySelectorAll(".pdp-check")){
-      if(b.dataset.pdpReady) continue;
-      b.dataset.pdpReady="1";
-      b.addEventListener("click",()=>{
-        const restId=b.dataset.rest, check=b.dataset.check;
-        game.socket.emit(`module.${MODULE_ID}`,{type:"choose",data:{restId,check,userId:game.user.id}});
-        for(const x of root.querySelectorAll(".pdp-check")) x.disabled=true;
-        b.innerHTML=`<i class="fas fa-spinner fa-spin"></i> ${LABELS[check]??check}`;
+    if (b.classList.contains("pdp-check")) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const restId=b.dataset.rest, check=b.dataset.check;
+      if (!restId || !check) return;
+
+      const card=b.closest(".message-content") ?? b.parentElement;
+      for(const x of card?.querySelectorAll?.(".pdp-check") ?? []) x.disabled=true;
+      b.innerHTML=`<i class="fas fa-check"></i> ${LABELS[check]??check} — Escolhido`;
+
+      game.socket.emit(`module.${MODULE_ID}`,{
+        type:"choose",
+        data:{restId,check,userId:game.user.id}
       });
+      return;
     }
 
-    for(const b of root.querySelectorAll(".pdp-effect")){
-      if(b.dataset.pdpReady) continue;
-      b.dataset.pdpReady="1";
-      b.addEventListener("click",async()=>{
-        if(!game.user.isGM) return;
-        const actor=await fromUuid(b.dataset.actor);
-        const c=CONSEQUENCES[Number(b.dataset.severity)]?.[Number(b.dataset.index)];
-        if(!actor||!c?.[2]) return;
-        try{
-          await createPenaltyEffect(actor,c[0],c[2].selector,c[2].value);
-          b.disabled=true; b.innerHTML='<i class="fas fa-check"></i> Aplicado';
-          ui.notifications.info(`${c[0]} aplicado em ${actor.name}.`);
-        }catch(e){ console.error(e); ui.notifications.error("Falha ao criar o Effect; veja o console."); }
-      });
+    if (b.classList.contains("pdp-effect")) {
+      event.preventDefault();
+      event.stopPropagation();
+      if(!game.user.isGM) return;
+
+      const actor=await fromUuid(b.dataset.actor);
+      const c=CONSEQUENCES[Number(b.dataset.severity)]?.[Number(b.dataset.index)];
+      if(!actor||!c?.[2]) return;
+
+      try{
+        await createPenaltyEffect(actor,c[0],c[2].selector,c[2].value);
+        b.disabled=true;
+        b.innerHTML='<i class="fas fa-check"></i> Aplicado';
+        ui.notifications.info(`${c[0]} aplicado em ${actor.name}.`);
+      }catch(e){
+        console.error(e);
+        ui.notifications.error("Falha ao criar o Effect; veja o console.");
+      }
     }
   });
-
   console.log(`Pressão das Profundezas v${VERSION} pronta. Use game.pressaoDasProfundezas.startRest()`);
 });
