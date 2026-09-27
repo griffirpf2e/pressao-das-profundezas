@@ -1,26 +1,10 @@
-# Pressão das Profundezas
+# Pressão das Profundezas v0.3.0
 
-Módulo multiplayer de Strain para Pathfinder 2e / Foundry VTT.
-
-## v0.2.0
-- Failure e Critical Failure aumentam `Strain` em +1, limitado pelo Resource Tracker.
-- Failure/CF continuam aumentando `Villain Point` em +1.
-- Modificadores dos testes: `+1 → -1 → -3 → -5 → -6` (cap).
-- Botão escolhido usa indicador estático `✓ ... — Escolhido`.
-- Cada um dos 20 eventos possui texto narrativo próprio de falha.
-- Critical Failure acrescenta uma linha narrativa extra.
-- Battle Medicine em Strain 4: imunidade por 1 hora.
-- Effects de penalidade de próximo teste continuam removendo-se após a rolagem.
-
-## Requisitos
-- Pathfinder 2e
-- PF2e Toolbelt
-- Resource Tracker com recursos chamados exatamente `Strain` e `Villain Point`
-
-## Macro do GM
-```js
-game.pressaoDasProfundezas.startRest();
-```
-
-## Manifest
-`https://github.com/undergroundjv-spec/pressao-das-profundezas/releases/latest/download/module.json`
+Consequence-system test build:
+- 1 random target at Strain 1–2; 2 different random targets at Strain 3–4.
+- Each target gets a separate random consequence, without duplicates when possible.
+- GM may select any token before clicking Apply/Prepare.
+- Character damage uses d8; equipment damage uses d6.
+- Generic next-skill penalties use self-removing Effects.
+- Fatigued added; Doomed replaced by Frightened + Sickened.
+- Next-encounter consequences are queued as pending Effects for this test build; automatic combat lifecycle is not yet enabled.

@@ -1,7 +1,7 @@
 const MODULE_ID = "pressao-das-profundezas";
 const TOOLBELT = "pf2e-toolbelt";
 const RESOURCE_SETTING = "resourceTracker.worldResources";
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 const LABELS = {
   fortitude:"Fortitude", reflex:"Reflexos", will:"Vontade", perception:"Percepção",
@@ -59,47 +59,39 @@ const FAILURE_FLAVOR = {
 };
 
 const CONSEQUENCES = {
-  1:[
-    ["Ferimento Leve","O personagem sofre [[/r 1d6]] de dano."],
-    ["Equipamento Arranhado","Um item sendo reparado perde [[/r 1d8]] HP."],
-    ["Distraído","–1 de circunstância na próxima Iniciativa.",{selector:"initiative",value:-1}],
-    ["Sentidos Perturbados","–1 de circunstância no próximo teste de Percepção.",{selector:"perception",value:-1}],
-    ["Trabalho Prejudicado","–1 de circunstância no próximo teste de Crafting.",{selector:"crafting",value:-1}],
-    ["Exploração Perturbada","–1 de circunstância no próximo teste relacionado à atividade de Exploração."]
-  ],
-  2:[
-    ["Ferimento","O personagem sofre [[/r 2d6]] de dano."],
-    ["Equipamento Danificado","Um item sendo reparado perde [[/r 2d8]] HP."],
-    ["Mau Presságio","Começa o próximo encontro Frightened 1."],
-    ["Reação Lenta","–2 de circunstância na próxima Iniciativa.",{selector:"initiative",value:-2}],
-    ["Atenção Dividida","–2 de circunstância no próximo teste de Percepção.",{selector:"perception",value:-2}],
-    ["Rastro Evidente","–2 de circunstância no próximo teste de Stealth.",{selector:"stealth",value:-2}],
-    ["Exploração Prejudicada","–2 de circunstância no próximo teste relacionado à atividade de Exploração."]
-  ],
-  3:[
-    ["Ferimento Grave","O personagem sofre [[/r 3d6]] de dano."],
-    ["Equipamento Comprometido","Um item sendo reparado perde [[/r 3d8]] HP."],
-    ["Nervos à Flor da Pele","Começa o próximo encontro Frightened 2."],
-    ["Guarda Baixa","Off-Guard até o início do primeiro turno no próximo encontro."],
-    ["Resposta Lenta","Slowed 1 durante o primeiro turno do próximo encontro."],
-    ["Foco Interrompido","Se realizou Refocus, não recupera 1 Focus Point."],
-    ["Tratamento Prejudicado","Fica imune a Treat Wounds por 1 hora."],
-    ["Vigilância Quebrada","Se estava usando Scout, não fornece o bônus de Scout na próxima Iniciativa."],
-    ["Busca Prejudicada","–2 de circunstância em Perception para Search até o próximo encontro."]
-  ],
-  4:[
-    ["Ferimento Crítico","O personagem sofre [[/r 4d6]] de dano."],
-    ["Equipamento Severamente Danificado","Um item sendo reparado perde [[/r 4d8]] HP."],
-    ["Foco Drenado","Perde 1 Focus Point."],
-    ["Refocus Frustrado","Se realizou Refocus, não recupera o Focus Point."],
-    ["Tratamento Bloqueado","Fica imune a Treat Wounds por 1 hora."],
-    ["Medicina de Combate Exaurida","Fica imune a Battle Medicine por 1 hora."],
-    ["Terror Crescente","Começa o próximo encontro Frightened 2."],
-    ["Resposta Comprometida","Slowed 1 durante o primeiro turno do próximo encontro."],
-    ["Guarda Baixa","Off-Guard até o fim do primeiro turno no próximo encontro."],
-    ["Sentidos Confusos","Dazzled durante a primeira rodada do próximo encontro."],
-    ["Exploração Interrompida","Não recebe o benefício da atividade de Exploração quando o próximo encontro começa."]
-  ]
+1:[
+{name:"Ferimento Leve",text:"O personagem sofre [[/r 1d8]] de dano.",kind:"roll"},
+{name:"Equipamento Arranhado",text:"Um equipamento apropriado perde [[/r 1d6]] HP.",kind:"roll"},
+{name:"Distraído",text:"–1 de circunstância na próxima Iniciativa.",kind:"effect",selector:"initiative",value:-1},
+{name:"Sentidos Perturbados",text:"–1 de circunstância no próximo teste de Percepção.",kind:"effect",selector:"perception",value:-1},
+{name:"Trabalho Prejudicado",text:"–1 de circunstância no próximo teste de perícia.",kind:"effect",selector:"skill-check",value:-1}],
+2:[
+{name:"Ferimento",text:"O personagem sofre [[/r 2d8]] de dano.",kind:"roll"},
+{name:"Equipamento Danificado",text:"Um equipamento apropriado perde [[/r 2d6]] HP.",kind:"roll"},
+{name:"Mau Presságio",text:"Começa o próximo encontro com Frightened 1.",kind:"queued"},
+{name:"Reação Lenta",text:"–2 de circunstância na próxima Iniciativa.",kind:"effect",selector:"initiative",value:-2},
+{name:"Atenção Dividida",text:"–2 de circunstância no próximo teste de Percepção.",kind:"effect",selector:"perception",value:-2},
+{name:"Trabalho Prejudicado",text:"–2 de circunstância no próximo teste de perícia.",kind:"effect",selector:"skill-check",value:-2}],
+3:[
+{name:"Ferimento Grave",text:"O personagem sofre [[/r 3d8]] de dano.",kind:"roll"},
+{name:"Equipamento Comprometido",text:"Um equipamento apropriado perde [[/r 3d6]] HP.",kind:"roll"},
+{name:"Nervos à Flor da Pele",text:"Começa o próximo encontro com Frightened 1 + Sickened 1.",kind:"queued"},
+{name:"Guarda Baixa",text:"Off-Guard até o início do primeiro turno no próximo encontro.",kind:"queued"},
+{name:"Resposta Lenta",text:"Slowed 1 durante o primeiro turno do próximo encontro.",kind:"queued"},
+{name:"Exaustão das Profundezas",text:"Ganha Fatigued.",kind:"condition",condition:"fatigued"},
+{name:"Foco Interrompido",text:"Se estava Refocusing, não recupera 1 Focus Point.",kind:"manual"},
+{name:"Tratamento Prejudicado",text:"Imune a Treat Wounds por 1 hora.",kind:"manual"},
+{name:"Exploração Prejudicada",text:"–2 de circunstância no próximo teste de perícia.",kind:"effect",selector:"skill-check",value:-2}],
+4:[
+{name:"Ferimento Crítico",text:"O personagem sofre [[/r 4d8]] de dano.",kind:"roll"},
+{name:"Equipamento Severamente Danificado",text:"Um equipamento apropriado perde [[/r 4d6]] HP.",kind:"roll"},
+{name:"Foco Drenado",text:"Perde 1 Focus Point; se estava Refocusing, em vez disso não recupera esse Focus Point.",kind:"manual"},
+{name:"Tratamento Bloqueado",text:"Imune a Treat Wounds por 1 hora.",kind:"manual"},
+{name:"Medicina de Combate Exaurida",text:"Imune a Battle Medicine por 1 hora.",kind:"manual"},
+{name:"Terror Crescente",text:"Começa o próximo encontro com Frightened 2 + Sickened 1.",kind:"queued"},
+{name:"Resposta Comprometida",text:"Slowed 1 durante o primeiro turno do próximo encontro.",kind:"queued"},
+{name:"Guarda Baixa",text:"Off-Guard até o fim do primeiro turno no próximo encontro.",kind:"queued"},
+{name:"Exaustão Esmagadora",text:"Ganha Fatigued.",kind:"condition",condition:"fatigued"}]
 };
 
 const LEVEL_DC = {0:14,1:15,2:16,3:18,4:19,5:20,6:22,7:23,8:24,9:26,10:27,11:28,12:30,13:31,14:32,15:34,16:35,17:36,18:38,19:39,20:40,21:42,22:44,23:46,24:48,25:50};
@@ -108,6 +100,10 @@ let activeRest = null;
 let socketReady = false;
 
 function esc(s){ return foundry.utils.escapeHTML(String(s ?? "")); }
+function randomUnique(array,count){const p=[...array],r=[];while(p.length&&r.length<count)r.push(p.splice(Math.floor(Math.random()*p.length),1)[0]);return r;}
+function partyCharacters(){const p=game.actors.filter(a=>a.type==="character"&&a.hasPlayerOwner);return p.length?p:game.actors.filter(a=>a.type==="character");}
+function selectedCharacterActors(){const m=new Map();for(const t of canvas?.tokens?.controlled??[]){if(t.actor?.type==="character")m.set(t.actor.uuid,t.actor);}return [...m.values()];}
+function consequenceButton(c){if(c.kind==="roll"||c.kind==="manual")return "";const label=c.kind==="queued"?"Preparar no Token Selecionado":"Aplicar ao Token Selecionado";return `<button class="pdp-effect" data-consequence="${encodeURIComponent(JSON.stringify(c))}"><i class="fas fa-bolt"></i> ${label}</button>`;}
 function requiredProgress(minutes){ return Math.max(Math.floor(minutes/10)-1,0); }
 function penaltyFor(n){ return [1,-1,-3,-5][n-1] ?? -6; }
 function getResources(){ return game.settings.get(TOOLBELT, RESOURCE_SETTING) ?? []; }
@@ -169,50 +165,27 @@ function playerActor(){
 }
 
 async function createPenaltyEffect(actor,name,selector,value){
-  return actor.createEmbeddedDocuments("Item",[{
-    name:`Strain — ${name}`, type:"effect", img:"icons/svg/downgrade.svg",
-    system:{
-      description:{value:`<p>${value} de penalidade de circunstância no próximo teste de ${LABELS[selector]??selector}.</p>`},
-      level:{value:1},
-      duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},
-      tokenIcon:{show:true}, unidentified:false, start:{value:0,initiative:null}, badge:null,
-      rules:[{key:"FlatModifier",selector,type:"circumstance",value,label:`Strain — ${name}`,removeAfterRoll:"if-enabled"}],
-      slug:null, traits:{value:[],rarity:"common",otherTags:[]}
-    }
-  }]);
+ const skills=["acrobatics","arcana","athletics","crafting","deception","diplomacy","intimidation","medicine","nature","occultism","performance","religion","society","stealth","survival","thievery"];
+ const resolved=selector==="skill-check"?skills:selector;
+ return actor.createEmbeddedDocuments("Item",[{name:`Strain — ${name}`,type:"effect",img:"icons/svg/downgrade.svg",system:{description:{value:"<p>Penalidade de Strain para o próximo teste afetado.</p>"},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[{key:"FlatModifier",selector:resolved,type:"circumstance",value,label:`Strain — ${name}`,removeAfterRoll:"if-enabled"}],slug:null,traits:{value:[],rarity:"common",otherTags:[]}}}]);
+}
+async function createQueuedEffect(actor,c){
+ return actor.createEmbeddedDocuments("Item",[{name:`Strain — Próximo Encontro — ${c.name}`,type:"effect",img:"icons/svg/clockwork.svg",system:{description:{value:`<p>${c.text}</p><p><strong>Pendente:</strong> aplicar no início do próximo encontro.</p>`},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[],slug:null,traits:{value:[],rarity:"common",otherTags:[]}},flags:{[MODULE_ID]:{queuedConsequence:c}}}]);
 }
 
 async function gmFailure(data){
-  if(!game.user.isGM) return;
-  const actor=await fromUuid(data.actorUuid);
-  if(!actor) return;
-  let vp={oldValue:"?",newValue:"?"}, strainChange={oldValue:data.strain,newValue:Math.min(data.strain+1,4)};
-  try { vp=await changeResource("Villain Point",1); } catch(e){ console.error(e); }
-  try { strainChange=await changeResource("Strain",1); } catch(e){ console.error(e); }
-  const severity=data.degree==="criticalFailure" ? Math.min(data.strain+1,4) : data.strain;
-  const flavor=FAILURE_FLAVOR[data.eventNo] ?? "As profundezas cobram seu preço.";
-  const criticalExtra=data.degree==="criticalFailure"
-    ? `<p><em>Desta vez, as profundezas não apenas resistem. Elas deixam algo para trás.</em></p>`
-    : "";
-  await ChatMessage.create({content:`<h2>${data.degree==="criticalFailure"?"Falha Crítica":"Falha"} — ${esc(data.eventName)}</h2>
-    <p><em>${esc(flavor)}</em></p>${criticalExtra}
-    <p><strong>${esc(actor.name)}</strong> sucumbe à pressão das profundezas.</p>
-    <p><strong>+1 Strain</strong> (${strainChange.oldValue} → ${strainChange.newValue})<br>
-    <strong>+1 Villain Point</strong> (${vp.oldValue} → ${vp.newValue})</p>`});
-  const rows=(CONSEQUENCES[severity]??[]).map((c,i)=>{
-    const btn=c[2]?`<button class="pdp-effect" data-actor="${actor.uuid}" data-severity="${severity}" data-index="${i}">
-      <i class="fas fa-bolt"></i> Aplicar Efeito</button>`:"";
-    return `<div class="pdp-consequence"><strong>${i+1}. ${c[0]}</strong><p>${c[1]}</p>${btn}</div>`;
-  }).join("");
-  const hist=data.history.map(h=>`<li>Teste ${h.n}: <strong>${({criticalSuccess:"Sucesso Crítico",success:"Sucesso",failure:"Falha",criticalFailure:"Falha Crítica"})[h.degree]}</strong> ${h.penalty?`(${h.penalty})`:"(sem penalidade)"}</li>`).join("");
-  await ChatMessage.create({
-    whisper:game.users.filter(u=>u.isGM).map(u=>u.id),
-    content:`<h2>Consequência de Strain</h2><p><strong>Personagem:</strong> ${esc(actor.name)}</p>
-    <p><strong>Evento:</strong> ${esc(data.eventName)}</p><p><strong>Teste:</strong> ${LABELS[data.check]??data.check}</p>
-    <p><strong>Strain:</strong> ${data.strain}${severity!==data.strain?` → consequências Strain ${severity}`:""}</p>
-    <h3>Rolagens</h3><ul>${hist}</ul><hr><h3>Escolha 1 consequência — Strain ${severity}</h3>${rows}`
-  });
-  activeRest=null;
+ if(!game.user.isGM)return; const actor=await fromUuid(data.actorUuid); if(!actor)return;
+ let vp={oldValue:"?",newValue:"?"},sc={oldValue:data.strain,newValue:Math.min(data.strain+1,4)};
+ try{vp=await changeResource("Villain Point",1);}catch(e){console.error(e)} try{sc=await changeResource("Strain",1);}catch(e){console.error(e)}
+ const severity=data.degree==="criticalFailure"?Math.min(data.strain+1,4):data.strain;
+ const flavor=FAILURE_FLAVOR[data.eventNo]??"As profundezas cobram seu preço.";
+ const extra=data.degree==="criticalFailure"?`<p><em>Desta vez, as profundezas não apenas resistem. Elas deixam algo para trás.</em></p>`:"";
+ await ChatMessage.create({content:`<h2>${data.degree==="criticalFailure"?"Falha Crítica":"Falha"} — ${esc(data.eventName)}</h2><p><em>${esc(flavor)}</em></p>${extra}<p><strong>${esc(actor.name)}</strong> sucumbe à pressão das profundezas.</p><p><strong>Strain</strong>: ${sc.oldValue} → ${sc.newValue}<br><strong>Villain Point</strong>: ${vp.oldValue} → ${vp.newValue}</p>`});
+ const count=severity>=3?2:1, targets=randomUnique(partyCharacters(),count), consequences=randomUnique(CONSEQUENCES[severity]??[],count);
+ const rows=targets.map((t,i)=>{const c=consequences[i];return `<div class="pdp-consequence"><h3>🎲 Alvo sorteado: ${esc(t.name)}</h3><p><strong>${esc(c.name)}</strong><br>${c.text}</p>${consequenceButton(c)}${c.kind==="manual"?'<p><em>Aplicação manual pelo GM.</em></p>':""}</div>`}).join("<hr>");
+ const hist=data.history.map(h=>`<li>Teste ${h.n}: <strong>${({criticalSuccess:"Sucesso Crítico",success:"Sucesso",failure:"Falha",criticalFailure:"Falha Crítica"})[h.degree]}</strong> (${h.penalty>=0?"+":""}${h.penalty})</li>`).join("");
+ await ChatMessage.create({whisper:game.users.filter(u=>u.isGM).map(u=>u.id),content:`<h2>Consequências — Strain ${severity}</h2><p><strong>Evento:</strong> ${esc(data.eventName)}<br><strong>Teste:</strong> ${LABELS[data.check]??data.check}</p><h3>Rolagens</h3><ul>${hist}</ul><hr><p><em>Alvos e consequências sorteados. Selecione o token desejado antes de aplicar um efeito.</em></p>${rows}`});
+ activeRest=null;
 }
 
 async function gmSuccess(data){
@@ -336,23 +309,19 @@ Hooks.once("ready",()=>{
     }
 
     if (b.classList.contains("pdp-effect")) {
-      event.preventDefault();
-      event.stopPropagation();
-      if(!game.user.isGM) return;
-
-      const actor=await fromUuid(b.dataset.actor);
-      const c=CONSEQUENCES[Number(b.dataset.severity)]?.[Number(b.dataset.index)];
-      if(!actor||!c?.[2]) return;
-
+      event.preventDefault(); event.stopPropagation(); if(!game.user.isGM)return;
+      let c; try{c=JSON.parse(decodeURIComponent(b.dataset.consequence));}catch(e){console.error(e);return;}
+      const actors=selectedCharacterActors();
+      if(!actors.length){ui.notifications.warn("Selecione pelo menos um token de personagem antes de aplicar a consequência.");return;}
       try{
-        await createPenaltyEffect(actor,c[0],c[2].selector,c[2].value);
-        b.disabled=true;
-        b.innerHTML='<i class="fas fa-check"></i> Aplicado';
-        ui.notifications.info(`${c[0]} aplicado em ${actor.name}.`);
-      }catch(e){
-        console.error(e);
-        ui.notifications.error("Falha ao criar o Effect; veja o console.");
-      }
+        for(const actor of actors){
+          if(c.kind==="effect")await createPenaltyEffect(actor,c.name,c.selector,c.value);
+          else if(c.kind==="condition"){if(actor.increaseCondition)await actor.increaseCondition(c.condition);else throw new Error("API de condição indisponível");}
+          else if(c.kind==="queued")await createQueuedEffect(actor,c);
+        }
+        b.disabled=true;b.innerHTML='<i class="fas fa-check"></i> Aplicado/Preparado';
+        ui.notifications.info(`${c.name}: ${actors.map(a=>a.name).join(", ")}.`);
+      }catch(e){console.error(e);ui.notifications.error("Falha ao aplicar/preparar a consequência; veja o console.");}
     }
   });
   console.log(`Pressão das Profundezas v${VERSION} pronta. Use game.pressaoDasProfundezas.startRest()`);
