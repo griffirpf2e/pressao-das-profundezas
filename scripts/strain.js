@@ -1,7 +1,7 @@
 const MODULE_ID = "pressao-das-profundezas";
 const TOOLBELT = "pf2e-toolbelt";
 const RESOURCE_SETTING = "resourceTracker.worldResources";
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 
 const LABELS = {
   fortitude:"Fortitude", reflex:"Reflexos", will:"Vontade", perception:"Percepção",
@@ -181,9 +181,9 @@ async function createQueuedEffect(actor,c){
  if(c.name==="Mau Presságio") queue={trigger:"combatStart",frightened:1};
  else if(c.name==="Nervos à Flor da Pele") queue={trigger:"combatStart",frightened:1,sickened:1};
  else if(c.name==="Terror Crescente") queue={trigger:"combatStart",frightened:2,sickened:1};
- else if(c.name==="Resposta Lenta"||c.name==="Resposta Comprometida") queue={trigger:"firstTurn",slowed:1,remove:"turnEnd"};
- else if(c.name==="Guarda Baixa" && c.text.includes("início")) queue={trigger:"firstTurn",offGuard:true,remove:"turnStart"};
- else if(c.name==="Guarda Baixa") queue={trigger:"firstTurn",offGuard:true,remove:"turnEnd"};
+ else if(c.name==="Resposta Lenta"||c.name==="Resposta Comprometida") queue={trigger:"combatStart",slowed:1,remove:"turnEnd"};
+ else if(c.name==="Guarda Baixa" && c.text.includes("início")) queue={trigger:"combatStart",offGuard:true,remove:"turnStart"};
+ else if(c.name==="Guarda Baixa") queue={trigger:"combatStart",offGuard:true,remove:"turnEnd"};
  return actor.createEmbeddedDocuments("Item",[{name:`Strain — Próximo Encontro — ${c.name}`,type:"effect",img:"icons/svg/clockwork.svg",
   system:{description:{value:`<p>${c.text}</p><p><strong>Pendente:</strong> será processado automaticamente no próximo encontro.</p>`},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[],slug:null,traits:{value:[],rarity:"common",otherTags:[]}},
   flags:{[MODULE_ID]:{queuedConsequence:{...c,...queue}}}}]);
@@ -210,32 +210,35 @@ async function processCombatStart(combat){
   const effects=actor.itemTypes.effect.filter(e=>e.flags?.[MODULE_ID]?.queuedConsequence?.trigger==="combatStart");
   for(const e of effects){
    const q=e.flags[MODULE_ID].queuedConsequence;
-   await setConditionValue(actor,"frightened",q.frightened);
-   await setConditionValue(actor,"sickened",q.sickened);
+   if(q.frightened) await setConditionValue(actor,"frightened",q.frightened);
+   if(q.sickened) await setConditionValue(actor,"sickened",q.sickened);
+   if(q.slowed){
+     await setConditionValue(actor,"slowed",q.slowed);
+     const slowed=actor.conditions?.bySlug?.("slowed");
+     if(slowed) await slowed.setFlag(MODULE_ID,"temporary",{combatId:combat.id,combatantId:cb.id,remove:"turnEnd"});
+   }
+   if(q.offGuard){
+     await tempEffect(actor,"Strain — Guarda Baixa",
+       [{key:"RollOption",domain:"all",option:"self:condition:off-guard"}],
+       q.remove,combat,cb);
+   }
    await actor.deleteEmbeddedDocuments("Item",[e.id]);
   }
  }
 }
-async function processFirstTurn(combat,cb){
+async function cleanupAtTurnStart(combat,cb){
+ if(!game.user.isGM||!cb?.actor)return;
+ await deleteTemps(cb.actor,combat.id,cb.id,"turnStart");
+}
+async function cleanupAtTurnEnd(combat,cb){
  if(!game.user.isGM||!cb?.actor)return;
  const actor=cb.actor;
- const effects=actor.itemTypes.effect.filter(e=>e.flags?.[MODULE_ID]?.queuedConsequence?.trigger==="firstTurn");
- for(const e of effects){
-   const q=e.flags[MODULE_ID].queuedConsequence;
-   if(q.slowed) await setConditionValue(actor,"slowed",q.slowed);
-   if(q.offGuard) await tempEffect(actor,"Strain — Guarda Baixa",[{key:"RollOption",domain:"all",option:"self:condition:off-guard"}],q.remove,combat,cb);
-   await actor.deleteEmbeddedDocuments("Item",[e.id]);
+ await deleteTemps(actor,combat.id,cb.id,"turnEnd");
+ const slowed=actor.conditions?.bySlug?.("slowed");
+ const temp=slowed?.getFlag?.(MODULE_ID,"temporary");
+ if(slowed && temp?.combatId===combat.id && temp?.combatantId===cb.id && temp?.remove==="turnEnd"){
+   await actor.decreaseCondition("slowed");
  }
- // "until start of first turn" expires immediately after its trigger point.
- await deleteTemps(actor,combat.id,cb.id,"turnStart");
-}
-async function cleanupTurnEnd(combat,cb){
- if(!game.user.isGM||!cb?.actor)return;
- await deleteTemps(cb.actor,combat.id,cb.id,"turnEnd");
- // Slowed normally reduces actions at turn preparation; remove our queued Slowed after that first turn.
- const queuedName="Strain — Resposta";
- const slowed=cb.actor.conditions?.bySlug?.("slowed");
- if(slowed && slowed.name?.includes?.(queuedName)) await cb.actor.decreaseCondition("slowed");
 }
 
 async function gmFailure(data){
@@ -332,11 +335,11 @@ Hooks.once("init",()=>{
 Hooks.on("createCombat",async combat=>{ await processCombatStart(combat); });
 Hooks.on("updateCombat",async (combat,changed)=>{
  if(!game.user.isGM)return;
- if(changed.round===1 && combat.round===1) await processCombatStart(combat);
+ if(combat.started && (changed.round===1 || changed.turn===0)) await processCombatStart(combat);
  if("turn" in changed || "round" in changed){
    const prevId=combat.previous?.combatantId;
-   if(prevId){const prev=combat.combatants.get(prevId);if(prev)await cleanupTurnEnd(combat,prev);}
-   if(combat.combatant) await processFirstTurn(combat,combat.combatant);
+   if(prevId){const prev=combat.combatants.get(prevId);if(prev)await cleanupAtTurnEnd(combat,prev);}
+   if(combat.combatant) await cleanupAtTurnStart(combat,combat.combatant);
  }
 });
 Hooks.once("ready",()=>{
@@ -376,10 +379,25 @@ Hooks.once("ready",()=>{
       for(const x of card?.querySelectorAll?.(".pdp-check") ?? []) x.disabled=true;
       b.innerHTML=`<i class="fas fa-check"></i> ${LABELS[check]??check} — Escolhido`;
 
-      game.socket.emit(`module.${MODULE_ID}`,{
-        type:"choose",
-        data:{restId,check,userId:game.user.id}
-      });
+      if(game.user.isGM){
+        const actor=playerActor();
+        if(!actor) return;
+        if(!activeRest || activeRest.restId!==restId || activeRest.resolved){
+          ui.notifications.warn("Este descanso não está mais ativo.");
+          return;
+        }
+        activeRest.resolved=true;
+        await runSequence({
+          restId,check,actorUuid:actor.uuid,tests:activeRest.tests,
+          eventNo:activeRest.eventNo,eventName:activeRest.eventName,
+          strain:activeRest.strain
+        });
+      } else {
+        game.socket.emit(`module.${MODULE_ID}`,{
+          type:"choose",
+          data:{restId,check,userId:game.user.id}
+        });
+      }
       return;
     }
 
