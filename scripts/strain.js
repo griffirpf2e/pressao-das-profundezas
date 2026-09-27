@@ -1,7 +1,7 @@
 const MODULE_ID = "pressao-das-profundezas";
 const TOOLBELT = "pf2e-toolbelt";
 const RESOURCE_SETTING = "resourceTracker.worldResources";
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 
 const LABELS = {
   fortitude:"Fortitude", reflex:"Reflexos", will:"Vontade", perception:"Percepção",
@@ -158,6 +158,13 @@ async function rollStatistic(actor, slug, penalty, eventName, n){
 }
 
 function playerActor(){
+  if(game.user.isGM){
+    const selected=(canvas?.tokens?.controlled??[]).filter(t=>t.actor?.type==="character");
+    if(selected.length===1) return selected[0].actor;
+    if(selected.length>1) ui.notifications.warn("Selecione apenas um token de personagem para rolar o teste de Strain.");
+    else ui.notifications.warn("Selecione um token de personagem para rolar o teste de Strain.");
+    return null;
+  }
   const char=game.user.character;
   if(char?.type==="character") return char;
   const owned=canvas?.tokens?.placeables?.map(t=>t.actor).filter(a=>a?.type==="character" && a.isOwner) ?? [];
@@ -170,7 +177,65 @@ async function createPenaltyEffect(actor,name,selector,value){
  return actor.createEmbeddedDocuments("Item",[{name:`Strain — ${name}`,type:"effect",img:"icons/svg/downgrade.svg",system:{description:{value:"<p>Penalidade de Strain para o próximo teste afetado.</p>"},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[{key:"FlatModifier",selector:resolved,type:"circumstance",value,label:`Strain — ${name}`,removeAfterRoll:"if-enabled"}],slug:null,traits:{value:[],rarity:"common",otherTags:[]}}}]);
 }
 async function createQueuedEffect(actor,c){
- return actor.createEmbeddedDocuments("Item",[{name:`Strain — Próximo Encontro — ${c.name}`,type:"effect",img:"icons/svg/clockwork.svg",system:{description:{value:`<p>${c.text}</p><p><strong>Pendente:</strong> aplicar no início do próximo encontro.</p>`},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[],slug:null,traits:{value:[],rarity:"common",otherTags:[]}},flags:{[MODULE_ID]:{queuedConsequence:c}}}]);
+ let queue={};
+ if(c.name==="Mau Presságio") queue={trigger:"combatStart",frightened:1};
+ else if(c.name==="Nervos à Flor da Pele") queue={trigger:"combatStart",frightened:1,sickened:1};
+ else if(c.name==="Terror Crescente") queue={trigger:"combatStart",frightened:2,sickened:1};
+ else if(c.name==="Resposta Lenta"||c.name==="Resposta Comprometida") queue={trigger:"firstTurn",slowed:1,remove:"turnEnd"};
+ else if(c.name==="Guarda Baixa" && c.text.includes("início")) queue={trigger:"firstTurn",offGuard:true,remove:"turnStart"};
+ else if(c.name==="Guarda Baixa") queue={trigger:"firstTurn",offGuard:true,remove:"turnEnd"};
+ return actor.createEmbeddedDocuments("Item",[{name:`Strain — Próximo Encontro — ${c.name}`,type:"effect",img:"icons/svg/clockwork.svg",
+  system:{description:{value:`<p>${c.text}</p><p><strong>Pendente:</strong> será processado automaticamente no próximo encontro.</p>`},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules:[],slug:null,traits:{value:[],rarity:"common",otherTags:[]}},
+  flags:{[MODULE_ID]:{queuedConsequence:{...c,...queue}}}}]);
+}
+async function setConditionValue(actor,slug,value){
+ if(!value)return;
+ const current=actor.conditions?.bySlug?.(slug);
+ const cur=Number(current?.value??current?.system?.value?.value??0);
+ for(let i=cur;i<value;i++) await actor.increaseCondition(slug);
+}
+async function tempEffect(actor,name,rules,remove,combat,combatant){
+ return actor.createEmbeddedDocuments("Item",[{name,type:"effect",img:"icons/svg/aura.svg",
+  system:{description:{value:"<p>Efeito temporário de Strain.</p>"},level:{value:1},duration:{value:-1,unit:"unlimited",sustained:false,expiry:null},tokenIcon:{show:true},unidentified:false,start:{value:0,initiative:null},badge:null,rules,slug:null,traits:{value:[],rarity:"common",otherTags:[]}},
+  flags:{[MODULE_ID]:{temporary:{remove,combatId:combat.id,combatantId:combatant.id}}}}]);
+}
+async function deleteTemps(actor,combatId,combatantId,remove){
+ const ids=actor.itemTypes.effect.filter(e=>{const t=e.flags?.[MODULE_ID]?.temporary;return t?.combatId===combatId&&t?.combatantId===combatantId&&t?.remove===remove}).map(e=>e.id);
+ if(ids.length) await actor.deleteEmbeddedDocuments("Item",ids);
+}
+async function processCombatStart(combat){
+ if(!game.user.isGM)return;
+ for(const cb of combat.combatants){
+  const actor=cb.actor;if(!actor)continue;
+  const effects=actor.itemTypes.effect.filter(e=>e.flags?.[MODULE_ID]?.queuedConsequence?.trigger==="combatStart");
+  for(const e of effects){
+   const q=e.flags[MODULE_ID].queuedConsequence;
+   await setConditionValue(actor,"frightened",q.frightened);
+   await setConditionValue(actor,"sickened",q.sickened);
+   await actor.deleteEmbeddedDocuments("Item",[e.id]);
+  }
+ }
+}
+async function processFirstTurn(combat,cb){
+ if(!game.user.isGM||!cb?.actor)return;
+ const actor=cb.actor;
+ const effects=actor.itemTypes.effect.filter(e=>e.flags?.[MODULE_ID]?.queuedConsequence?.trigger==="firstTurn");
+ for(const e of effects){
+   const q=e.flags[MODULE_ID].queuedConsequence;
+   if(q.slowed) await setConditionValue(actor,"slowed",q.slowed);
+   if(q.offGuard) await tempEffect(actor,"Strain — Guarda Baixa",[{key:"RollOption",domain:"all",option:"self:condition:off-guard"}],q.remove,combat,cb);
+   await actor.deleteEmbeddedDocuments("Item",[e.id]);
+ }
+ // "until start of first turn" expires immediately after its trigger point.
+ await deleteTemps(actor,combat.id,cb.id,"turnStart");
+}
+async function cleanupTurnEnd(combat,cb){
+ if(!game.user.isGM||!cb?.actor)return;
+ await deleteTemps(cb.actor,combat.id,cb.id,"turnEnd");
+ // Slowed normally reduces actions at turn preparation; remove our queued Slowed after that first turn.
+ const queuedName="Strain — Resposta";
+ const slowed=cb.actor.conditions?.bySlug?.("slowed");
+ if(slowed && slowed.name?.includes?.(queuedName)) await cb.actor.decreaseCondition("slowed");
 }
 
 async function gmFailure(data){
@@ -264,6 +329,16 @@ Hooks.once("init",()=>{
   console.log(`Pressão das Profundezas v${VERSION} | init`);
 });
 
+Hooks.on("createCombat",async combat=>{ await processCombatStart(combat); });
+Hooks.on("updateCombat",async (combat,changed)=>{
+ if(!game.user.isGM)return;
+ if(changed.round===1 && combat.round===1) await processCombatStart(combat);
+ if("turn" in changed || "round" in changed){
+   const prevId=combat.previous?.combatantId;
+   if(prevId){const prev=combat.combatants.get(prevId);if(prev)await cleanupTurnEnd(combat,prev);}
+   if(combat.combatant) await processFirstTurn(combat,combat.combatant);
+ }
+});
 Hooks.once("ready",()=>{
   game.pressaoDasProfundezas={startRest,version:VERSION};
 

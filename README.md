@@ -1,10 +1,7 @@
-# Pressão das Profundezas v0.3.0
+# Pressão das Profundezas v0.4.0
 
-Consequence-system test build:
-- 1 random target at Strain 1–2; 2 different random targets at Strain 3–4.
-- Each target gets a separate random consequence, without duplicates when possible.
-- GM may select any token before clicking Apply/Prepare.
-- Character damage uses d8; equipment damage uses d6.
-- Generic next-skill penalties use self-removing Effects.
-- Fatigued added; Doomed replaced by Frightened + Sickened.
-- Next-encounter consequences are queued as pending Effects for this test build; automatic combat lifecycle is not yet enabled.
+- Preserves the validated v0.3.0 random consequence system.
+- GM can roll for a player by selecting exactly one PC token and clicking the normal Strain check.
+- Frightened/Sickened pending consequences trigger automatically in the next combat.
+- Slowed/Off-Guard pending consequences trigger on the affected PC's first turn.
+- Pending effects are removed after triggering.
