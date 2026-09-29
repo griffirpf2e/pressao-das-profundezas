@@ -14,6 +14,8 @@ function actorFor(item){ return item?.parent?.documentName==="Actor" ? item.pare
 function quantity(item){ return Number(item?.system?.quantity ?? 1); }
 function coinUnitGP(item){ return COIN_GP[item?.slug] ?? COIN_GP[item?.system?.slug] ?? null; }
 function isCoin(item){ return coinUnitGP(item)!==null; }
+const IGNORED_TYPES = new Set(["spell", "effect"]);
+function isTrackedItem(item){ return !IGNORED_TYPES.has(item?.type); }
 function actorMoneyGP(actor){
   if(!actor) return null;
   const items=actor.items?.contents ?? actor.items ?? [];
@@ -263,14 +265,17 @@ Hooks.once("ready",()=>{
 });
 Hooks.on("preCreateItem",(item,data,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   rememberMoneyBefore(item);
 });
 Hooks.on("createItem",(item,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   if(isCoin(item)) queueEvidence(moneyEvidence(item,quantity(item),takeMoneyBefore(item))); else queueEvidence(itemEvidence("item-acquired",item));
 });
 Hooks.on("preUpdateItem",(item,changed,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   if(foundry.utils.getProperty(changed,"system.quantity")!==undefined){
     quantityBeforeUpdate.set(item.uuid,quantity(item));
     rememberMoneyBefore(item);
@@ -278,6 +283,7 @@ Hooks.on("preUpdateItem",(item,changed,options,userId)=>{
 });
 Hooks.on("updateItem",(item,changed,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   if(foundry.utils.getProperty(changed,"system.quantity")===undefined) return;
   const oldQty=quantityBeforeUpdate.get(item.uuid); quantityBeforeUpdate.delete(item.uuid);
   if(!Number.isFinite(oldQty)) return;
@@ -287,9 +293,11 @@ Hooks.on("updateItem",(item,changed,options,userId)=>{
 });
 Hooks.on("preDeleteItem",(item,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   rememberMoneyBefore(item);
 });
 Hooks.on("deleteItem",(item,options,userId)=>{
   if(userId!==game.user.id||options?.[MODULE_ID]?.ignoreTransactionLog) return;
+  if(!isTrackedItem(item)) return;
   if(isCoin(item)) queueEvidence(moneyEvidence(item,-quantity(item),takeMoneyBefore(item))); else queueEvidence(itemEvidence("item-removed",item));
 });
